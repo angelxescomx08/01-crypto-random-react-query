@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import "./App.css";
 
-const getRandomNumberFromApi = async (signal: AbortSignal): Promise<number> => {
+const getRandomNumberFromApi = async (): Promise<number> => {
   const url = new URL("https://www.random.org/integers/");
   url.searchParams.set("num", "1");
   url.searchParams.set("min", "1");
@@ -10,26 +10,34 @@ const getRandomNumberFromApi = async (signal: AbortSignal): Promise<number> => {
   url.searchParams.set("base", "10");
   url.searchParams.set("format", "plain");
   url.searchParams.set("rdn", "new");
-  const res = await fetch(url, { signal });
+  const res = await fetch(url);
   const numberString = await res.text();
+  //throw new Error("Error");
   const number = +numberString;
   return number;
 };
 
 function App() {
-  const [number, setNumber] = useState<number>();
-
-  useEffect(() => {
-    const { signal, abort } = new AbortController();
-    getRandomNumberFromApi(signal).then((num) => setNumber(num));
-    return () => {
-      abort();
-    };
-  }, []);
+  const randomQuery = useQuery(["random"], getRandomNumberFromApi);
 
   return (
     <main>
-      <h2>Número aleatorio: {number}</h2>
+      {randomQuery.isFetching ? (
+        <h2>Cargando...</h2>
+      ) : (
+        <h2>Número aleatorio: {randomQuery.data}</h2>
+      )}
+
+      {!randomQuery.isFetching && randomQuery.isError && (
+        <h2>Ha ocurrido un error {`${randomQuery.error}`}</h2>
+      )}
+
+      <button
+        onClick={() => randomQuery.refetch()}
+        disabled={randomQuery.isFetching}
+      >
+        Refetch
+      </button>
     </main>
   );
 }
